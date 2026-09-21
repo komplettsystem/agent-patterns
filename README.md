@@ -19,7 +19,7 @@ agent-patterns/
   TRIAGE-LOOP.md           ← capture anywhere, file into projects later, with an expiry horizon
   MULTI-AGENT-COMPAT.md    ← when teammates open a project in a different coding agent
   scripts/
-    check-agent-setup.sh   ← Claude Code SessionStart hook: sets up AGENT.md and CLAUDE.md in each repo
+    check-agent-setup.sh   ← Claude Code SessionStart hook: sets up AGENTS.md, CLAUDE.md and an AGENT.md stub in each repo
 ```
 
 **Where to start:** [AGENT-BASE.md](AGENT-BASE.md). Its rules are starting points, not
@@ -29,19 +29,22 @@ laws: a project's own rules override them, and so does what the work teaches.
 
 ```
 any-project/
-  AGENT.md     ← the base guidelines, with the project's own rules below them
-  CLAUDE.md    ← Claude Code entry point: "@AGENT.md"
+  AGENTS.md    ← the base guidelines, with the project's own rules below them
+  CLAUDE.md    ← Claude Code entry point: "@AGENTS.md"
+  AGENT.md     ← short redirect stub, only for Amp
 ```
 
-`AGENT.md` is the single source of truth per project. Other coding agents get a one-line
-pointer file in their own format; [MULTI-AGENT-COMPAT.md](MULTI-AGENT-COMPAT.md) covers
-how.
+`AGENTS.md` is the single source of truth per project. It is the cross-tool standard, so
+agents that read it natively need nothing else. `CLAUDE.md` and the `AGENT.md` stub are
+small pointers for the two agents that look for other filenames;
+[MULTI-AGENT-COMPAT.md](MULTI-AGENT-COMPAT.md) covers how.
 
 ## Automatic setup in Claude Code (optional)
 
 `scripts/check-agent-setup.sh` runs when a Claude Code session starts. In any git repo
-without them, it creates `AGENT.md` from `AGENT-BASE.md` (local copy first, GitHub as
-fallback) and a `CLAUDE.md` that imports it. It never commits or pushes anything.
+without them, it creates `AGENTS.md` from `AGENT-BASE.md` (local copy first, GitHub as
+fallback), an `AGENT.md` redirect stub for Amp, and a `CLAUDE.md` that imports
+`AGENTS.md`. It never commits or pushes anything.
 
 Add to `~/.claude/settings.json`:
 
@@ -73,7 +76,7 @@ Without that file the script prints nothing about an inbox.
 
 ## Adding project-specific rules
 
-Edit the project's `AGENT.md` and add rules below the `## Project-Specific Guidelines`
+Edit the project's `AGENTS.md` and add rules below the `## Project-Specific Guidelines`
 heading. Where they conflict with the base guidelines, the project's rules win.
 
 ## License
