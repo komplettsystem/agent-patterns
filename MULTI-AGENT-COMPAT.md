@@ -16,7 +16,26 @@ The fix is not to pretend compatibility. It's to be explicit, and to make the no
 
 ---
 
-## The Pattern
+## This repo's own answer: `AGENTS.md` as primary
+
+`AGENTS.md` is read natively by more tools than any single alternative — Codex CLI, Cursor, Copilot, Windsurf, Aider, Zed, and others. So the convention here is:
+
+- **`AGENTS.md`** — the real content: base guidelines plus this project's own section. Read natively by most agents.
+- **`CLAUDE.md`** — one line, `@AGENTS.md`, nothing else. Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so this is the pointer that makes it see the same content.
+- **`AGENT.md`** (singular) — a small stub, present only because Amp (Sourcegraph) reads that exact filename natively and has no knowledge of `AGENTS.md`:
+
+  ```markdown
+  # This project's instructions live in AGENTS.md
+
+  You're reading this because you're Amp, which looks for `AGENT.md` natively. This
+  project's real instructions are in `AGENTS.md` — read that file now, it has everything.
+  ```
+
+That covers the two real native-filename conventions in circulation without maintaining two parallel copies of the actual content.
+
+---
+
+## The general pattern, for anything else
 
 ### 1. Add detection files at native instruction paths
 
@@ -67,9 +86,9 @@ If they say yes:
 Do not proceed with project tasks until this is confirmed or the user explicitly opts out.
 ```
 
-### 3. Add a catch-all in AGENT.md
+### 3. Add a catch-all in AGENTS.md
 
-`AGENT.md` is read by Amp natively and by any agent that falls through the other detection files. Add an "Agent Compatibility" section that:
+`AGENTS.md` is the primary file here and is read natively by most agents that fall through the other detection files (Amp is the exception — see the stub above). Add an "Agent Compatibility" section that:
 
 - States the primary agent
 - Lists what's missing for non-primary agents
@@ -87,7 +106,7 @@ If the primary agent supports skills/slash commands, add a `/port-to-agent` skil
 The non-primary agent reads its detection file, warns the user, and when the user says yes — does the port autonomously. The project owner is not in the loop. The team member using the non-primary agent owns the migration.
 
 What the ported workflow contains:
-- The base guidelines from `AGENT.md` (and `AGENT-BASE.md` / `AGENT-CODING.md` behind it)
+- The base guidelines from `AGENTS.md` (and `AGENT-BASE.md` / `AGENT-CODING.md` behind it)
 - Equivalents of the primary agent's slash commands as the target agent's native prompt format
 - The session-start sync instruction adapted for the target agent
 - Any project-specific rules from the primary agent's instruction files
@@ -106,4 +125,4 @@ What the ported workflow contains:
 ## Related Patterns
 
 - **[AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md)** — the broader paradigm; agents author the artifacts, humans review
-- **[AGENT-BASE.md](AGENT-BASE.md)** — the base guidelines a ported workflow carries over
+- **[AGENT-BASE.md](AGENT-BASE.md)** — rule 11 points here; also the base guidelines a ported workflow carries over

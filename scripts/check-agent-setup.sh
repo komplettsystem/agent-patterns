@@ -21,6 +21,9 @@
 set -euo pipefail
 
 GITHUB_RAW="${AGENT_PATTERNS_RAW_URL:-https://raw.githubusercontent.com/komplettsystem/agent-patterns/main/AGENT-BASE.md}"
+# AGENTS.md is the primary per-project file (cross-tool standard: read natively by Codex
+# CLI, Cursor, Copilot, etc). A small AGENT.md (singular) stub also gets created purely to
+# redirect Amp, which reads that exact filename natively. See MULTI-AGENT-COMPAT.md.
 STANDARDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE_FILE="$STANDARDS_DIR/AGENT-BASE.md"
 
@@ -71,14 +74,15 @@ if [[ "$REPO_ROOT" == "$STANDARDS_DIR" ]]; then
   exit 0
 fi
 
+AGENTS_MD="$REPO_ROOT/AGENTS.md"
 AGENT_MD="$REPO_ROOT/AGENT.md"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 CHANGED=0
 
-# --- AGENT.md ---
-if [[ ! -f "$AGENT_MD" ]]; then
-  get_base_content > "$AGENT_MD"
-  cat >> "$AGENT_MD" << 'EOF'
+# --- AGENTS.md (primary) ---
+if [[ ! -f "$AGENTS_MD" ]]; then
+  get_base_content > "$AGENTS_MD"
+  cat >> "$AGENTS_MD" << 'EOF'
 
 ---
 
@@ -88,19 +92,31 @@ if [[ ! -f "$AGENT_MD" ]]; then
      The base guidelines above come from agent-patterns/AGENT-BASE.md.
      Do not edit the base section here — update AGENT-BASE.md instead. -->
 EOF
-  echo "[agent-standards] Created AGENT.md in $REPO_ROOT" >&2
+  echo "[agent-standards] Created AGENTS.md in $REPO_ROOT" >&2
+  CHANGED=1
+fi
+
+# --- AGENT.md (singular) — Amp-redirect stub only, see MULTI-AGENT-COMPAT.md ---
+if [[ ! -f "$AGENT_MD" ]]; then
+  cat > "$AGENT_MD" << 'EOF'
+# This project's instructions live in AGENTS.md
+
+You're reading this because you're Amp, which looks for `AGENT.md` natively. This
+project's real instructions are in `AGENTS.md` — read that file now, it has everything.
+EOF
+  echo "[agent-standards] Created AGENT.md (Amp redirect stub) in $REPO_ROOT" >&2
   CHANGED=1
 fi
 
 # --- CLAUDE.md (Claude Code specific) ---
 if [[ ! -f "$CLAUDE_MD" ]]; then
-  echo "@AGENT.md" > "$CLAUDE_MD"
+  echo "@AGENTS.md" > "$CLAUDE_MD"
   echo "[agent-standards] Created CLAUDE.md in $REPO_ROOT" >&2
   CHANGED=1
-elif ! grep -qF "@AGENT.md" "$CLAUDE_MD"; then
+elif ! grep -qF "@AGENTS.md" "$CLAUDE_MD"; then
   # Prepend so base loads first; existing project content follows and takes precedence
-  { printf '@AGENT.md\n\n'; cat "$CLAUDE_MD"; } > "${CLAUDE_MD}.tmp" && mv "${CLAUDE_MD}.tmp" "$CLAUDE_MD"
-  echo "[agent-standards] Prepended @AGENT.md to existing CLAUDE.md in $REPO_ROOT" >&2
+  { printf '@AGENTS.md\n\n'; cat "$CLAUDE_MD"; } > "${CLAUDE_MD}.tmp" && mv "${CLAUDE_MD}.tmp" "$CLAUDE_MD"
+  echo "[agent-standards] Prepended @AGENTS.md to existing CLAUDE.md in $REPO_ROOT" >&2
   CHANGED=1
 fi
 

@@ -82,6 +82,14 @@ the reason, then follow the decision. Skip it for low-stakes wording.
 Go back to what you defined in rule 3 and check against it. Numbers, dates and names get
 checked against their source. Report what you checked and what you didn't.
 
+A precise-sounding number is not a verified one. A specific-sounding claim (a latency
+figure, a cost, a percentage, a scale factor) reads as more credible than a vague one —
+backwards, since vague language invites scrutiny and precise numbers get waved through.
+Trace it to its primary source before stating or repeating it, even if it already
+survived several rounds of review: repetition across passes isn't verification, and
+neither is a same-turn re-read of your own revision. Check a redraft against the source
+again, as if for the first time, not against your memory of having checked it before.
+
 ## 9. Pick a loop for work bigger than one sitting
 
 | Pattern | Use when |
@@ -90,6 +98,80 @@ checked against their source. Report what you checked and what you didn't.
 | [EXPERIMENT-LOOP.md](EXPERIMENT-LOOP.md) | Testing a hypothesis against a measurable signal; keep only what improves it |
 | [TRIAGE-LOOP.md](TRIAGE-LOOP.md) | Capturing work anywhere and filing it into projects later |
 | [AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md) | Framing any agent task: goal, constraints and done criteria from the human; review like a pull request |
+
+## 10. Self-edit for AI writing tics
+
+Before presenting a substantial written deliverable (docs, reports, README-style writing —
+not quick replies), check for these seven patterns. A human reader who works with LLM
+output daily catches these on sight; catch them first.
+
+1. **Abstraction that hides the mechanism instead of stating it.** Bad: "the gap is
+   structural rather than accidental." Fix: name the actual mechanism inline instead of
+   leaving a conclusion the reader has to decode.
+2. **Self-referential praise of your own observation.** Bad: "and that single observation
+   does more work than any feature matrix," "that is itself the finding," "the ordering is
+   the insight." Fix: delete the announcing clause and let the content stand alone.
+3. **Double-dash parenthetical overuse.** The "X — Y — Z" appositive pattern, repeated
+   across a document, reads as machine-generated. A single well-placed dash is fine; the
+   tell is density and repetition. Fix: vary punctuation — parentheses, commas, a colon.
+4. **Reused formulaic enumeration templates.** E.g. "Two things worth noting. First, ...
+   Second, ..." repeated near-verbatim multiple times in one document. Fix: vary the
+   lead-in each time.
+5. **Borrowed-metaphor jargon as an importance-marker.** E.g. "load-bearing" used to mean
+   "important." Fix: state directly why something matters.
+6. **Empty intensifiers and hedge words used as filler.** "Worth noting," "genuinely,"
+   "actually" are fine when doing real contrastive work (e.g. "who it's *actually* built
+   for" vs. how it's marketed); they're filler when they only add emphasis. Test: does
+   removing the word lose a real distinction, or just lower the volume?
+7. **Standard buzzword/cliché list to avoid:** leverage, seamless(ly), robust, delve,
+   unlock, paradigm, tapestry, game-changing, synergy, cutting-edge, state-of-the-art,
+   holistic.
+
+Quick test for any suspect sentence: could you explain what it actually means in one
+plain sentence? If yes, that plain sentence is probably the one that should have been
+written.
+
+## 11. Be honest about which agent you are
+
+A project built for one coding agent accumulates agent-specific scaffolding — instruction
+files, slash commands, session-start hooks — that a different agent will silently ignore,
+choke on, or half-follow. Don't let that happen invisibly. See
+[MULTI-AGENT-COMPAT.md](MULTI-AGENT-COMPAT.md) for the full pattern: detection files at
+each major agent's native instruction path, written *to the agent*, that state the
+incompatibility and offer to self-provision an equivalent workflow.
+
+This repo's own convention: `AGENTS.md` is the primary instruction file (the cross-tool
+standard, read natively by Codex CLI, Cursor, Copilot, and others). `CLAUDE.md` is a
+one-line pointer to it (`@AGENTS.md`) plus nothing else. A small `AGENT.md` stub also
+exists at repo root purely to redirect Amp (Sourcegraph), which reads that singular
+filename natively and would otherwise never find `AGENTS.md`.
+
+## 12. Separate a checked finding from a plausible guess
+
+A plausible causal explanation is not a finding until it's checked against evidence. When
+explaining *why* something happened — a bug, a test result, another system's or model's
+behavior — a well-reasoned story is still a guess. Don't state it with the confidence of
+a verified conclusion. Two options, and only two:
+
+- Verify it: read the actual source/log/data, or run the test that would prove or
+  disprove it, before presenting it as the answer. If the check is runnable without new
+  resources or permissions, run it yourself; don't wait to be asked.
+- Or label it explicitly as unverified — "my best guess is X; to confirm I'd need to
+  check Y" — and say what that check would be.
+
+Don't burn the human's attention doing the verification *for* you. This especially
+applies to hypotheses about *why* something behaves as it does (root causes, other
+models' or systems' internal behavior) — the domain where a confident-sounding wrong
+answer is cheapest to generate and most expensive for someone else to catch. If a
+stronger test later contradicts an earlier explanation, say so plainly and revise; don't
+quietly patch the story around it.
+
+The test: could you point to the exact evidence (file, log line, live output) behind this
+claim? If not, it's a hypothesis. Say so.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, clarifying questions come before implementation rather than after mistakes, failures are caught early instead of hidden, and tests exist before the code they validate.
 
 ---
 
