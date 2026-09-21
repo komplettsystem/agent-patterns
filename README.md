@@ -19,7 +19,7 @@ agent-patterns/
   TRIAGE-LOOP.md           ← capture anywhere, file into projects later, with an expiry horizon
   MULTI-AGENT-COMPAT.md    ← when teammates open a project in a different coding agent
   scripts/
-    check-agent-setup.sh   ← Claude Code SessionStart hook: sets up AGENTS.md, CLAUDE.md and an AGENT.md stub in each repo
+    check-agent-setup.sh   ← Claude Code SessionStart hook: sets up AGENTS.md, CLAUDE.md and an AGENT.md stub in each repo, reports the inbox and stale STATUS.md files
 ```
 
 **Where to start:** [AGENT-BASE.md](AGENT-BASE.md). Its rules are starting points, not
@@ -73,6 +73,18 @@ INBOX_CHANNEL_ID=C0123456789
 ```
 
 Without that file the script prints nothing about an inbox.
+
+**Optional liveness check**: a harness fails by being abandoned, so each session can
+report which projects have let their `STATUS.md` go stale. Add to the same
+`inbox.local.conf`:
+
+```bash
+LIVENESS_PROJECTS="project-a project-b"   # directory names next to this repo
+LIVENESS_DAYS=14                          # optional, default 14
+```
+
+A project with no `STATUS.md` counts as stale. Without `LIVENESS_PROJECTS` the script
+prints nothing about liveness.
 
 ## Adding project-specific rules
 

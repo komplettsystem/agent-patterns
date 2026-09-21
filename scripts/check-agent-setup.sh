@@ -62,6 +62,41 @@ Once, early in this session, without delaying or blocking the user's first reque
 EOF
 fi
 
+# --- Liveness check ---
+# A harness fails by being abandoned, not by being wrong, so each session reports which
+# tracked projects have let STATUS.md go stale. Opt-in like the inbox: set
+# LIVENESS_PROJECTS (space-separated directory names under the projects root) in
+# inbox.local.conf. LIVENESS_DAYS (default 14) and LIVENESS_ROOT (default: the parent of
+# this repo) are optional. A missing STATUS.md counts as stale, never as fine.
+if [[ -n "${LIVENESS_PROJECTS:-}" ]]; then
+  LIVENESS_ROOT="${LIVENESS_ROOT:-$(dirname "$STANDARDS_DIR")}"
+  LIVENESS_DAYS="${LIVENESS_DAYS:-14}"
+  now="$(date +%s)"
+  live=0
+  total=0
+  stale=""
+  for project in $LIVENESS_PROJECTS; do
+    total=$((total + 1))
+    status_file="$LIVENESS_ROOT/$project/STATUS.md"
+    if [[ ! -f "$status_file" ]]; then
+      stale="$stale $project (no STATUS.md),"
+      continue
+    fi
+    mtime="$(stat -c %Y "$status_file" 2>/dev/null || stat -f %m "$status_file")"
+    age_days=$(( (now - mtime) / 86400 ))
+    if (( age_days < LIVENESS_DAYS )); then
+      live=$((live + 1))
+    else
+      stale="$stale $project (${age_days}d),"
+    fi
+  done
+  echo "[liveness] $live of $total tracked projects have a STATUS.md updated in the last $LIVENESS_DAYS days."
+  if [[ -n "$stale" ]]; then
+    echo "Stale:${stale%,}"
+  fi
+  echo "Mention this in one line early in the session, without blocking the user's first request. Never refresh a STATUS.md just to move the number; only rewrite it when its content changed."
+fi
+
 # Only run inside a git repo
 if ! git rev-parse --git-dir &>/dev/null 2>&1; then
   exit 0
