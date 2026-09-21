@@ -103,7 +103,7 @@ If the primary agent supports skills/slash commands, add a `/port-to-agent` skil
 
 ## Self-Provisioning Is the Goal
 
-The non-primary agent reads its detection file, warns the user, and when the user says yes — does the port autonomously. The project owner is not in the loop. The team member using the non-primary agent owns the migration.
+The non-primary agent reads its detection file, warns the user and, when the user says yes, does the port autonomously. The project owner is not in the loop. The team member using the non-primary agent owns the migration.
 
 What the ported workflow contains:
 - The base guidelines from `AGENTS.md` (and `AGENT-BASE.md` / `AGENT-CODING.md` behind it)
@@ -124,5 +124,5 @@ What the ported workflow contains:
 
 ## Related Patterns
 
-- **[AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md)** — the broader paradigm; agents author the artifacts, humans review
+- **[AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md)** — the broader approach; agents author the artifacts, humans review
 - **[AGENT-BASE.md](AGENT-BASE.md)** — rule 11 points here; also the base guidelines a ported workflow carries over

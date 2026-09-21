@@ -1,6 +1,6 @@
 # Agentic Engineering
 
-A paradigm for working with AI agents where humans act as orchestrators and oversight, not authors.
+An approach to working with AI agents where humans act as orchestrators and oversight, not authors.
 
 Coined by [Andrej Karpathy (2026)](https://thenewstack.io/vibe-coding-is-passe/): *"Agentic because the new default is that you are not writing the code directly 99% of the time, you are orchestrating agents who do and acting as oversight. Engineering because there is an art and science and expertise to it."*
 
@@ -78,14 +78,14 @@ These go into a **human-curated input zone** (a `raw/` directory, a shared doc, 
 
 ## Ascending Abstraction
 
-The leverage in agentic engineering comes from ascending layers of abstraction. Each layer you hand off to agents frees you to operate at a higher level:
+The gain in agentic engineering comes from ascending layers of abstraction. Each layer you hand off to agents frees you to operate at a higher level:
 
 1. Writing code → orchestrating agents that write code
 2. Running experiments → orchestrating agents that run experiments
 3. Doing research → orchestrating agents that research and synthesize
 4. Filling in documents → orchestrating agents that draft documents for review
 
-The highest-leverage work is: setting up long-running orchestrators with the right tools, memory, and instructions — so the agent can operate without constant check-ins.
+The most valuable work is setting up long-running orchestrators with the right tools, memory, and instructions, so the agent can operate without constant check-ins.
 
 ---
 

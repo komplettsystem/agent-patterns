@@ -24,7 +24,7 @@ They compose well: use the research loop to build domain knowledge, use the expe
 
 ## The Three-Part Brief (program.md)
 
-Before the agent starts, the human writes a brief — a short document that carries three registers simultaneously:
+Before the agent starts, the human writes a brief — a short document that carries three kinds of content at once:
 
 1. **Instructions** — what hypothesis to test, what direction to explore
 2. **Constraints** — what must not change, what's out of scope, what rules are fixed
@@ -90,7 +90,7 @@ If you can't define a quality signal, use the research loop instead.
 
 ## Logging
 
-Every iteration — commit or discard — gets logged. The log is how the human reviews what happened overnight.
+Every iteration, commit or discard, gets logged. The log is how the human reviews what happened overnight.
 
 Minimum log entry per iteration:
 ```
@@ -126,4 +126,4 @@ The log lives alongside the artifact. It's the audit trail that lets the human p
 ## Related Patterns
 
 - **[RESEARCH-LOOP.md](RESEARCH-LOOP.md)** — accumulation-oriented; use when building encyclopedic coverage; experiment loop is the quality filter that complements it
-- **[AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md)** — the broader paradigm; experiment loop is one concrete application of autonomous agent orchestration
+- **[AGENTIC-ENGINEERING.md](AGENTIC-ENGINEERING.md)** — the broader approach; experiment loop is one concrete application of autonomous agent orchestration

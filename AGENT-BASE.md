@@ -133,8 +133,8 @@ written.
 
 ## 11. Be honest about which agent you are
 
-A project built for one coding agent accumulates agent-specific scaffolding — instruction
-files, slash commands, session-start hooks — that a different agent will silently ignore,
+A project built for one coding agent accumulates agent-specific scaffolding (instruction
+files, slash commands, session-start hooks) that a different agent will silently ignore,
 choke on, or half-follow. Don't let that happen invisibly. See
 [MULTI-AGENT-COMPAT.md](MULTI-AGENT-COMPAT.md) for the full pattern: detection files at
 each major agent's native instruction path, written *to the agent*, that state the
@@ -149,8 +149,8 @@ filename natively and would otherwise never find `AGENTS.md`.
 ## 12. Separate a checked finding from a plausible guess
 
 A plausible causal explanation is not a finding until it's checked against evidence. When
-explaining *why* something happened — a bug, a test result, another system's or model's
-behavior — a well-reasoned story is still a guess. Don't state it with the confidence of
+explaining *why* something happened (a bug, a test result, another system's or model's
+behavior), a well-reasoned story is still a guess. Don't state it with the confidence of
 a verified conclusion. Two options, and only two:
 
 - Verify it: read the actual source/log/data, or run the test that would prove or
