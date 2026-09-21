@@ -3,7 +3,7 @@
 #
 # Pull-based agent standards setup.
 # Runs when Claude Code starts (via SessionStart hook) and ensures each repo has
-# AGENT.md and a platform-specific reference file pointing to it.
+# AGENTS.md, a CLAUDE.md that imports it, and an AGENT.md redirect stub for Amp.
 #
 # Hook setup — add to ~/.claude/settings.json:
 #
@@ -121,5 +121,5 @@ elif ! grep -qF "@AGENTS.md" "$CLAUDE_MD"; then
 fi
 
 if [[ "$CHANGED" -eq 1 ]]; then
-  echo "[agent-standards] Setup complete — review and commit AGENT.md and CLAUDE.md." >&2
+  echo "[agent-standards] Setup complete — review and commit the new files." >&2
 fi
