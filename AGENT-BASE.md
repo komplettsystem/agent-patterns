@@ -35,6 +35,15 @@ more than it records, the pattern isn't real yet.
 - *Code:* existing helpers, naming, error handling.
 - *Other work:* the last version of the document, the tables a project already keeps.
 
+**If a local knowledge-base search tool is available, use it before grepping blindly
+when you don't know which file holds a fact.** Reading files one at a time only works
+once you already know where to look; a search tool answers "where does this live"
+directly, and is the right first move for a fact whose location isn't obvious (why was
+X retired, what did we decide about Y) or a question that spans more than one project.
+Grep and a targeted file read are still right once you know where to look, or for
+anything the search index doesn't cover (very recent edits, files outside the indexed
+tree).
+
 ## 3. Decide how you'll know it's right, before you start
 
 Before producing anything non-trivial, name what "done" looks like and what "wrong"
