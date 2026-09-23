@@ -24,8 +24,8 @@ parent session's last human input before the call. Permission-prompt approvals a
 not recorded in transcripts; only rejections are.
 
 Usage:
-  audit-rule-compliance.py [--since YYYY-MM-DD] [--project SUBSTR]
-                           [--exclude SESSION_ID ...] [--out PATH]
+  audit-rule-compliance.py [--since YYYY-MM-DD | --days N] [--project SUBSTR]
+                           [--exclude SESSION_ID ...] [--out PATH] [--summary] [--root DIR]
 
 Examples:
   audit-rule-compliance.py --since 2026-09-01
@@ -40,7 +40,7 @@ import re
 import statistics
 import subprocess
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 ROOT = os.path.expanduser("~/.claude/projects")
 R3_CUTOFF = "2026-09-22T19:27:30Z"   # AGENT-BASE commit adding the search-first rule
@@ -243,6 +243,20 @@ def preceding(ev, by_uuid, fallback):
         cur = e.get("parentUuid")
     return (human if human is not None else fallback), prev_agent
 
+def summary_line(events, r3, args):
+    """One line for the session hook: only events where no request was found at all."""
+    def n(rule, cls="not-requested"):
+        return sum(1 for r in events if r["rule"] == rule and r["class"] == cls)
+    def plural(k, word):
+        return f"{k} {word}" + ("" if k == 1 else "s")
+    searched = [st for _, st in r3 if st["first"] and st["available"]]
+    window = f"last {args.days} days" if args.days else f"since {args.since}"
+    return (f"[audit] {window}: no request found for {plural(n('R1'), 'send')}, "
+            f"{plural(n('R4'), 'destructive command')}, {plural(n('R2'), 'commit')} "
+            f"({n('R5', 'violation')} without attribution); knowledge search first in "
+            f"{sum(st['lks'] for st in searched)} of {plural(len(searched), 'session')} that searched Projects. "
+            f"Keyword heuristic; details: python3 {os.path.abspath(__file__)} --since {args.since}")
+
 # --- main -----------------------------------------------------------------------
 
 def main():
@@ -251,10 +265,16 @@ def main():
     ap.add_argument("--project", default="")
     ap.add_argument("--exclude", action="append", default=[], help="session id (substring) to skip")
     ap.add_argument("--out", default="/tmp/audit-rule-compliance.jsonl")
+    ap.add_argument("--days", type=int, help="look back this many days instead of --since")
+    ap.add_argument("--summary", action="store_true",
+                    help="print one line of unrequested-event counts (for the session hook); write no event file")
+    ap.add_argument("--root", default=ROOT, help="transcript folder (default: ~/.claude/projects)")
     args = ap.parse_args()
+    if args.days:
+        args.since = (date.today() - timedelta(days=args.days)).isoformat()
     since_ts = datetime.strptime(args.since, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
 
-    files = [p for p in glob.glob(os.path.join(ROOT, "**", "*.jsonl"), recursive=True)
+    files = [p for p in glob.glob(os.path.join(args.root, "**", "*.jsonl"), recursive=True)
              if os.path.getmtime(p) >= since_ts and args.project in p
              and not any(x in p for x in args.exclude)]
     events, seen_ids, r3, r6 = [], set(), [], defaultdict(lambda: [0, 0, Counter()])
@@ -385,6 +405,10 @@ def main():
                         events.append(dict(rec, rule="R5", **{"class": c5, "why": w5}))
         if r3_state is not None and r3_state["start"] and r3_state["start"] >= args.since:
             r3.append((path, r3_state))
+
+    if args.summary:
+        print(summary_line(events, r3, args))
+        return
 
     # --- report ---
     ok = {"requested", "compliant", "temp-path", "standing-instruction", "blocked", "n/a"}

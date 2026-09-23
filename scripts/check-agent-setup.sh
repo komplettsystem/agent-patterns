@@ -97,6 +97,31 @@ if [[ -n "${LIVENESS_PROJECTS:-}" ]]; then
   echo "Mention this in one line early in the session, without blocking the user's first request. Never refresh a STATUS.md just to move the number; only rewrite it when its content changed."
 fi
 
+# --- Rule audit ---
+# Written rules only count if something checks them. Reports how many actions in recent
+# session transcripts had no request for them in the preceding user message (sends,
+# destructive commands, commits), via scripts/audit-rule-compliance.py --summary. Opt-in:
+# set AUDIT_DAYS (look-back window, e.g. 7) in inbox.local.conf. Cached per day, so only
+# the first session of the day pays the ~2 seconds.
+if [[ -n "${AUDIT_DAYS:-}" ]]; then
+  audit_cache="${XDG_CACHE_HOME:-$HOME/.cache}/agent-patterns/audit-$(date +%F)-${AUDIT_DAYS}d.txt"
+  if [[ ! -s "$audit_cache" ]]; then
+    mkdir -p "$(dirname "$audit_cache")"
+    if python3 "$STANDARDS_DIR/scripts/audit-rule-compliance.py" --days "$AUDIT_DAYS" --summary \
+        > "$audit_cache.tmp" 2>/dev/null; then
+      mv "$audit_cache.tmp" "$audit_cache"
+    else
+      rm -f "$audit_cache.tmp"
+    fi
+  fi
+  if [[ -s "$audit_cache" ]]; then
+    cat "$audit_cache"
+    echo "Mention this in one line early in the session, without blocking the user's first request. If a count is not zero, offer to list those events with the details command. The counts come from a keyword match, and auto mode's approvals aren't in the transcripts, so treat them as a reason to look, not as findings."
+  else
+    echo "[audit] The rule audit failed to run. Say so in one line; never report it as zero."
+  fi
+fi
+
 # Only run inside a git repo
 if ! git rev-parse --git-dir &>/dev/null 2>&1; then
   exit 0

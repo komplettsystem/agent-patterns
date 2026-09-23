@@ -86,6 +86,19 @@ LIVENESS_DAYS=14                          # optional, default 14
 A project with no `STATUS.md` counts as stale. Without `LIVENESS_PROJECTS` the script
 prints nothing about liveness.
 
+**Optional rule audit**: written rules only count if something checks them. Each day's
+first session can report how many actions in recent Claude Code transcripts had no request
+for them in the preceding user message (external sends, destructive commands, commits),
+using `scripts/audit-rule-compliance.py --summary`. Add to `inbox.local.conf`:
+
+```bash
+AUDIT_DAYS=7   # look-back window in days
+```
+
+The line is cached per day under `~/.cache/agent-patterns/`. It's a keyword heuristic, and
+permission approvals aren't recorded in transcripts, so the counts are a reason to look,
+not findings. If the audit fails, the session is told so rather than shown zeros.
+
 ## Adding project-specific rules
 
 Edit the project's `AGENTS.md` and add rules below the `## Project-Specific Guidelines`
