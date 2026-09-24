@@ -140,6 +140,12 @@ Quick test for any suspect sentence: could you explain what it actually means in
 plain sentence? If yes, that plain sentence is probably the one that should have been
 written.
 
+When a draft has collected several separate fixes (a banned word here, a repeated opening
+there, a number swapped for a public one), redraft the paragraph end to end instead of
+patching one more sentence. Patched prose reads stitched together even when every sentence
+passes the checks. If it still reads wooden, ask the human to say it roughly in their own
+words, and only trim.
+
 ## 11. Be honest about which agent you are
 
 A project built for one coding agent accumulates agent-specific scaffolding (instruction
