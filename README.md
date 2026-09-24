@@ -46,6 +46,12 @@ without them, it creates `AGENTS.md` from `AGENT-BASE.md` (local copy first, Git
 fallback), an `AGENT.md` redirect stub for Amp, and a `CLAUDE.md` that imports
 `AGENTS.md`. It never commits or pushes anything.
 
+It doesn't update an existing `AGENTS.md`. After changing `AGENT-BASE.md`, run
+`python3 scripts/sync-agent-base.py` to see which repos next to this one have a stale copy,
+then `--apply` to update them. It replaces only the part above "Project-Specific
+Guidelines", skips any repo whose copy has local edits that syncing would delete (and lists
+those lines), and never commits.
+
 Add to `~/.claude/settings.json`:
 
 ```json
