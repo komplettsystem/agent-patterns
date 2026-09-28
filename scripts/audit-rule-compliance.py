@@ -23,17 +23,28 @@ walking parentUuid back from the tool call. Subagent actions are attributed to t
 parent session's last human input before the call. Permission-prompt approvals are
 not recorded in transcripts; only rejections are.
 
+Flagged events (R1/R2/R4/R5, class not in the "ok" set) reappear every run for as
+long as they sit inside the --since/--days window — the window rolls, nothing is
+ever dismissed. Run with --ack to mark every currently-flagged event in the given
+window as reviewed; acknowledged events are then suppressed from every later run
+(--summary and the full report alike), regardless of window, until the ack store
+(--ack-file, default under ~/.cache/agent-patterns/) is edited or deleted. Acking
+records a human review happened; it never changes an event's computed class.
+
 Usage:
   audit-rule-compliance.py [--since YYYY-MM-DD | --days N] [--project SUBSTR]
                            [--exclude SESSION_ID ...] [--out PATH] [--summary] [--root DIR]
+                           [--ack] [--ack-file PATH]
 
 Examples:
   audit-rule-compliance.py --since 2026-09-01
   audit-rule-compliance.py --project career-hub --out /tmp/career-audit.jsonl
+  audit-rule-compliance.py --days 7 --ack   # reviewed today's flagged events; close them out
 """
 
 import argparse
 import glob
+import hashlib
 import json
 import os
 import re
@@ -46,6 +57,31 @@ ROOT = os.path.expanduser("~/.claude/projects")
 R3_CUTOFF = "2026-09-22T19:27:30Z"   # AGENT-BASE commit adding the search-first rule
 R6_CUTOFF = "2026-09-21T09:54:00Z"   # AGENT-BASE commit adding rule 10
 EXCERPT = 200
+OK = {"requested", "compliant", "temp-path", "standing-instruction", "blocked", "n/a"}
+ACK_DEFAULT = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"),
+                           "agent-patterns", "audit-ack.json")
+
+
+def event_key(r):
+    """Stable id for a flagged event, independent of --since/--days: the same
+    underlying action always hashes the same, so an ack survives a wider window."""
+    basis = "|".join(str(r.get(k, "")) for k in ("rule", "kind", "file", "timestamp", "tool", "input"))
+    return hashlib.sha256(basis.encode()).hexdigest()[:16]
+
+
+def load_ack(path):
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return data.get("acked", {}) if isinstance(data, dict) else {}
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def save_ack(path, acked):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump({"acked": acked}, f, indent=2, sort_keys=True)
 
 SECRET = re.compile(r"(sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[abpr]-[A-Za-z0-9-]{8,}"
                     r"|AKIA[A-Z0-9]{4,}|lin_api_\w+|(?i:bearer|authorization:)\s*\S+"
@@ -269,6 +305,10 @@ def main():
     ap.add_argument("--summary", action="store_true",
                     help="print one line of unrequested-event counts (for the session hook); write no event file")
     ap.add_argument("--root", default=ROOT, help="transcript folder (default: ~/.claude/projects)")
+    ap.add_argument("--ack", action="store_true",
+                    help="mark every currently-flagged event in this window as reviewed, then exit; "
+                         "acked events are suppressed from every later run regardless of window")
+    ap.add_argument("--ack-file", default=ACK_DEFAULT, help="where acknowledgements are stored")
     args = ap.parse_args()
     if args.days:
         args.since = (date.today() - timedelta(days=args.days)).isoformat()
@@ -406,12 +446,32 @@ def main():
         if r3_state is not None and r3_state["start"] and r3_state["start"] >= args.since:
             r3.append((path, r3_state))
 
+    acked = load_ack(args.ack_file)
+
+    if args.ack:
+        new = {}
+        for r in events:
+            if r["class"] in OK:
+                continue
+            k = event_key(r)
+            if k not in acked:
+                new[k] = {"acked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                          "rule": r["rule"], "kind": r["kind"], "class": r["class"],
+                          "file": r["file"], "timestamp": r["timestamp"], "input": r.get("input", "")}
+        already = sum(1 for r in events if r["class"] not in OK and event_key(r) in acked)
+        acked.update(new)
+        save_ack(args.ack_file, acked)
+        print(f"Acknowledged {len(new)} new event(s) as reviewed ({already} were already acked). "
+              f"Ack store: {args.ack_file}")
+        return
+
+    events = [r for r in events if event_key(r) not in acked]
+
     if args.summary:
         print(summary_line(events, r3, args))
         return
 
     # --- report ---
-    ok = {"requested", "compliant", "temp-path", "standing-instruction", "blocked", "n/a"}
     print(f"Transcripts: {len(files)} files ({sum('/subagents/' in f for f in files)} subagent), since {args.since}\n")
     print(f"{'rule':<5}{'where':<6}{'events':>7}  classes")
     for rule in ("R1", "R2", "R4", "R5"):
@@ -445,7 +505,7 @@ def main():
 
     with open(args.out, "w") as f:
         for r in events:
-            if r["class"] not in ok:
+            if r["class"] not in OK:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         for path, st in r3:
             if st["first"] and not st["lks"] and st["available"]:

@@ -71,6 +71,34 @@ class Summary(unittest.TestCase):
         run(self.tmp.name, "--days", "7", "--summary", "--out", out)
         self.assertFalse(os.path.exists(out))
 
+    def test_ack_suppresses_flagged_events_from_later_runs(self):
+        ack_file = os.path.join(self.tmp.name, "ack.json")
+        r = run(self.tmp.name, "--days", "7", "--ack", "--ack-file", ack_file)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # unasked send (R1) + unasked commit (R2) + its missing-attribution (R5)
+        self.assertIn("Acknowledged 3 new event", r.stdout)
+        self.assertTrue(os.path.exists(ack_file))
+
+        r2 = run(self.tmp.name, "--days", "7", "--summary", "--ack-file", ack_file)
+        line = r2.stdout.strip().splitlines()[0]
+        self.assertIn("0 sends", line)
+        self.assertIn("0 commits (0 without attribution)", line)
+
+    def test_ack_is_idempotent(self):
+        ack_file = os.path.join(self.tmp.name, "ack.json")
+        run(self.tmp.name, "--days", "7", "--ack", "--ack-file", ack_file)
+        r = run(self.tmp.name, "--days", "7", "--ack", "--ack-file", ack_file)
+        self.assertIn("Acknowledged 0 new event(s) as reviewed (3 were already acked)", r.stdout)
+
+    def test_ack_key_is_stable_across_window_size(self):
+        # An event acked under --days 7 must still be suppressed under a wider window,
+        # since the whole point is to survive the window rolling forward.
+        ack_file = os.path.join(self.tmp.name, "ack.json")
+        run(self.tmp.name, "--days", "7", "--ack", "--ack-file", ack_file)
+        r = run(self.tmp.name, "--days", "365", "--summary", "--ack-file", ack_file)
+        line = r.stdout.strip().splitlines()[0]
+        self.assertIn("0 commit", line)
+
 
 if __name__ == "__main__":
     unittest.main()
