@@ -184,6 +184,33 @@ quietly patch the story around it.
 The test: could you point to the exact evidence (file, log line, live output) behind this
 claim? If not, it's a hypothesis. Say so.
 
+## 13. For git and outward messages, the risk boundary is visibility, not the action
+
+A commit is never gated on being asked — the risk in committing is noise, not
+authorization. Hold off only when the conversation might still change the content, so
+nothing has to be reworded after it's already in history; once it's settled, commit.
+
+A push follows the repo it lands in, not the act of pushing: to a **private** repo it's
+as recoverable as the commit itself (revert, or another push) and needs no ask. To a
+**public** repo it's externally visible the moment it lands, so it does need one. Check
+with `gh repo view --json visibility` rather than assuming from the name or from habit —
+visibility can differ from what a repo's purpose suggests, and can change.
+
+Sending anything outward — email, Slack, DMs, job applications, comments on someone
+else's PR or issue, anything a person on the other end receives — is never done by the
+agent, full stop, on any repo, public or private. That line doesn't move with visibility;
+only drafting and staging it does. The one kind of exception: a channel a project's own
+instructions designate as a standing, automated destination for the agent's own status
+reports (not a person or a conversation) — that's reporting, not messaging, and posting
+there follows the project's own written cadence rather than waiting for an ask each time.
+
+- *Code:* `git commit` once content has settled; `git push` needs an explicit ask only
+  when the target repo is public.
+- *Other work:* the same boundary holds past git — publishing a document, posting to a
+  channel, submitting a form. The destination's visibility decides whether it waits for a
+  human, not how the action is phrased, except a project's own designated automated-report
+  channel.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, clarifying questions come before implementation rather than after mistakes, failures are caught early instead of hidden, and tests exist before the code they validate.
