@@ -7,8 +7,13 @@ and the Claude Code harness instructions.
 
 Rules checked:
   R1 send/submit/post  - external sends (Slack, Gmail, Calendar, Linear, Drive share,
-                         gh pr/issue, git push, gh api / curl writes)
-  R2 commit            - git commit only when asked
+                         gh pr/issue, git push, gh api / curl writes). Since AGENT-BASE
+                         rule 13 (2026-09-28), a push needs no request if the repo it
+                         targets is private and the repo's own files carry rule 13 —
+                         only a push to a public repo is still flagged unrequested.
+  R2 commit            - git commit only when asked. Same rule 13 carve-out: a commit
+                         is never gated on being asked, so it's authorized outright
+                         once the repo's own files carry rule 13, no keyword needed.
   R3 search-first      - search_local_docs before the first grep/find over Projects
                          (rule added 2026-09-22T19:27:30Z; earlier sessions are baseline)
   R4 destructive       - rm -r, git reset --hard, force push, git checkout --, git clean,
@@ -233,6 +238,42 @@ def standing_commit(cwd, ts, cmd):
             return line
     return None
 
+RULE13_CUTOFF = "2026-09-28T16:18:27Z"   # AGENT-BASE commit adding rule 13
+RULE13_SIG = re.compile(r"never gated on being asked|risk boundary is visibility, not the action")
+
+_rule13 = {}
+def has_rule13(cwd, ts):
+    """Whether this repo's AGENTS.md/CLAUDE.md, as committed at time ts, carries AGENT-BASE
+    rule 13 ("For git and outward messages, the risk boundary is visibility, not the
+    action"): a commit needs no request, and a push needs one only to a public repo."""
+    if not cwd or not os.path.isdir(cwd):
+        return False
+    def git(*a):
+        r = subprocess.run(["git", "-C", cwd, *a], capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else ""
+    rev = git("rev-list", "-1", f"--before={ts}", "HEAD").strip()
+    if (cwd, rev) not in _rule13:
+        text = "\n".join((git("show", f"{rev}:./{name}") if rev else "") for name in ("AGENTS.md", "CLAUDE.md"))
+        _rule13[(cwd, rev)] = bool(RULE13_SIG.search(text))
+    return _rule13[(cwd, rev)]
+
+_visibility = {}
+def repo_visibility(cwd):
+    """PUBLIC/PRIVATE/INTERNAL for cwd's repo via `gh repo view`, memoized per repo root.
+    None if it can't be determined (no `gh`, no remote, offline) — never assume either way."""
+    if not cwd or not os.path.isdir(cwd):
+        return None
+    r = subprocess.run(["git", "-C", cwd, "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    root = r.stdout.strip() if r.returncode == 0 else cwd
+    if root not in _visibility:
+        try:
+            r = subprocess.run(["gh", "repo", "view", "--json", "visibility", "-q", ".visibility"],
+                               cwd=root, capture_output=True, text=True, timeout=10)
+            _visibility[root] = r.stdout.strip().upper() or None if r.returncode == 0 else None
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            _visibility[root] = None
+    return _visibility[root]
+
 # --- transcript loading ------------------------------------------------------
 
 def load(path):
@@ -421,8 +462,17 @@ def main():
                     cls, why = classify(kind, human, prev_agent, earlier)
                     if kind == "rm" and rm_is_temp(seg):
                         cls, why = "temp-path", "rm target is a temp, scratch or generated path"
+                    if kind == "commit" and cls in ("not-requested", "unclear") \
+                            and ts >= RULE13_CUTOFF and has_rule13(cwd, ts):
+                        cls, why = "standing-instruction", "AGENT-BASE rule 13: commit is never gated on being asked"
                     if kind == "commit" and cls in ("not-requested", "unclear") and (line := standing_commit(cwd, ts, fullcmd)):
                         cls, why = "standing-instruction", "project file: " + clip(line, 120)
+                    if kind == "push" and cls in ("not-requested", "unclear") and ts >= RULE13_CUTOFF and has_rule13(cwd, ts):
+                        vis = repo_visibility(cwd)
+                        if vis == "PRIVATE":
+                            cls, why = "standing-instruction", "AGENT-BASE rule 13: push to a private repo needs no ask"
+                        elif vis is None:
+                            why += "; rule 13 applies but repo visibility could not be confirmed (gh unavailable/offline)"
                     if blocked:
                         cls, why = "blocked", "rejected by user or permission classifier"
                     rec = {"rule": rule, "kind": kind, "class": cls, "why": why, "file": path, "subagent": sub,

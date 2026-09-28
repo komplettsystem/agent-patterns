@@ -31,8 +31,46 @@ SESSION = [
 ]
 
 
-def run(root, *args):
-    return subprocess.run([sys.executable, SCRIPT, "--root", root, *args], capture_output=True, text=True)
+def run(root, *args, env=None):
+    return subprocess.run([sys.executable, SCRIPT, "--root", root, *args], capture_output=True, text=True, env=env)
+
+
+def tool_at(uid, parent, iso_ts, tid, name, inp, cwd=None):
+    e = {"type": "assistant", "uuid": uid, "parentUuid": parent, "timestamp": iso_ts,
+         "message": {"content": [{"type": "tool_use", "id": tid, "name": name, "input": inp}]}}
+    if cwd:
+        e["cwd"] = cwd
+    return e
+
+
+def user_at(uid, parent, iso_ts, text):
+    return {"type": "user", "uuid": uid, "parentUuid": parent, "timestamp": iso_ts,
+            "message": {"role": "user", "content": text}}
+
+
+def git(repo, *args):
+    subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+
+
+def make_repo(root, agents_md_text):
+    """A git repo whose AGENTS.md carries AGENT-BASE rule 13's signature text."""
+    repo = os.path.join(root, "repo")
+    os.makedirs(repo)
+    git(repo, "init", "-q")
+    git(repo, "config", "user.email", "t@t.com")
+    git(repo, "config", "user.name", "t")
+    with open(os.path.join(repo, "AGENTS.md"), "w") as f:
+        f.write(agents_md_text)
+    git(repo, "add", ".")
+    git(repo, "commit", "-q", "-m", "add rule 13")
+    return repo
+
+
+def make_fake_gh(dir_, visibility):
+    path = os.path.join(dir_, "gh")
+    with open(path, "w") as f:
+        f.write(f"#!/bin/sh\necho {visibility}\n")
+    os.chmod(path, 0o755)
 
 
 class Summary(unittest.TestCase):
@@ -98,6 +136,76 @@ class Summary(unittest.TestCase):
         r = run(self.tmp.name, "--days", "365", "--summary", "--ack-file", ack_file)
         line = r.stdout.strip().splitlines()[0]
         self.assertIn("0 commit", line)
+
+
+RULE13_TEXT = (
+    "## 13. For git and outward messages, the risk boundary is visibility, not the action\n\n"
+    "A commit is never gated on being asked... A push follows the repo it lands in..."
+)
+BEFORE_CUTOFF = f"{TODAY}T00:00:01Z"   # same day as RULE13_CUTOFF, but before its time-of-day
+AFTER_CUTOFF = f"{TODAY}T23:59:59Z"    # same day, after its time-of-day
+
+
+class Rule13(unittest.TestCase):
+    """AGENT-BASE rule 13 authorizes a commit outright, and a push to a private repo,
+    once the repo's own AGENTS.md/CLAUDE.md carries it — folded into the classifier
+    at commit d3ced56 (2026-09-28)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = make_repo(self.tmp.name, RULE13_TEXT)
+        self.transcripts = os.path.join(self.tmp.name, "transcripts")
+        os.makedirs(os.path.join(self.transcripts, "-proj"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, session):
+        with open(os.path.join(self.transcripts, "-proj", "s1.jsonl"), "w") as f:
+            f.write("\n".join(json.dumps(e) for e in session))
+
+    def test_unasked_commit_authorized_when_repo_carries_rule13(self):
+        # R5 attribution is a separate check rule 13 doesn't touch — keep the message
+        # compliant so this test isolates R2's not-requested/standing-instruction call.
+        cmd = "git commit -m \"unasked\n\nCo-Authored-By: Claude Opus <noreply@anthropic.com>\""
+        self.write([
+            user_at("u1", None, BEFORE_CUTOFF, "look at the notes"),
+            tool_at("a1", "u1", AFTER_CUTOFF, "t1", "Bash", {"command": cmd}, cwd=self.repo),
+        ])
+        r = run(self.transcripts, "--days", "7", "--summary")
+        self.assertIn("0 commits (0 without attribution)", r.stdout, r.stdout)
+
+    def test_unasked_commit_before_cutoff_still_flagged(self):
+        self.write([
+            user_at("u1", None, BEFORE_CUTOFF, "look at the notes"),
+            tool_at("a1", "u1", BEFORE_CUTOFF, "t1", "Bash", {"command": "git commit -m 'unasked'"}, cwd=self.repo),
+        ])
+        r = run(self.transcripts, "--days", "7", "--summary")
+        self.assertIn("1 commit", r.stdout, r.stdout)
+
+    def test_unasked_push_authorized_when_repo_is_private(self):
+        fake_bin = os.path.join(self.tmp.name, "bin")
+        os.makedirs(fake_bin)
+        make_fake_gh(fake_bin, "PRIVATE")
+        env = {**os.environ, "PATH": fake_bin + os.pathsep + os.environ["PATH"]}
+        self.write([
+            user_at("u1", None, BEFORE_CUTOFF, "look at the notes"),
+            tool_at("a1", "u1", AFTER_CUTOFF, "t1", "Bash", {"command": "git push -q"}, cwd=self.repo),
+        ])
+        r = run(self.transcripts, "--days", "7", "--summary", env=env)
+        self.assertIn("0 sends", r.stdout, r.stdout)
+
+    def test_unasked_push_still_flagged_when_repo_is_public(self):
+        fake_bin = os.path.join(self.tmp.name, "bin")
+        os.makedirs(fake_bin)
+        make_fake_gh(fake_bin, "PUBLIC")
+        env = {**os.environ, "PATH": fake_bin + os.pathsep + os.environ["PATH"]}
+        self.write([
+            user_at("u1", None, BEFORE_CUTOFF, "look at the notes"),
+            tool_at("a1", "u1", AFTER_CUTOFF, "t1", "Bash", {"command": "git push -q"}, cwd=self.repo),
+        ])
+        r = run(self.transcripts, "--days", "7", "--summary", env=env)
+        self.assertIn("1 send", r.stdout, r.stdout)
 
 
 if __name__ == "__main__":
