@@ -133,6 +133,18 @@ if [[ -n "${JUDGMENT_FILE:-}" ]]; then
   fi
 fi
 
+# --- Message extraction catch-up ---
+# A SessionEnd hook copies the user's own messages out of each transcript before
+# cleanupPeriodDays deletes it (scripts/extract-user-messages.py). Sessions that ended
+# without the hook (crash, closed terminal) are caught up here. Incremental, so this
+# costs well under a second. Opt-in: set EXTRACT_DIR in inbox.local.conf; keep it
+# outside any repo that gets pushed.
+if [[ -n "${EXTRACT_DIR:-}" ]]; then
+  if ! python3 "$STANDARDS_DIR/scripts/extract-user-messages.py" --out-dir "$EXTRACT_DIR" --catch-up 2>/dev/null; then
+    echo "[extract] The message extraction catch-up failed. Say so in one line."
+  fi
+fi
+
 # Only run inside a git repo
 if ! git rev-parse --git-dir &>/dev/null 2>&1; then
   exit 0
