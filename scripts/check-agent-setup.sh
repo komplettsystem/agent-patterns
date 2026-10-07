@@ -122,6 +122,17 @@ if [[ -n "${AUDIT_DAYS:-}" ]]; then
   fi
 fi
 
+# --- Judgment drift and memory consistency ---
+# Corrections kept as durable examples go stale and can contradict each other, and the
+# same memory can drift apart between projects. scripts/check-judgment-drift.py says
+# when a drift review is due and lists memory files to compare; a fresh-context agent
+# and the user do the comparing. Opt-in: set JUDGMENT_FILE in inbox.local.conf.
+if [[ -n "${JUDGMENT_FILE:-}" ]]; then
+  if ! python3 "$STANDARDS_DIR/scripts/check-judgment-drift.py" --judgment "$JUDGMENT_FILE" 2>/dev/null; then
+    echo "[judgment] The drift check failed to run. Say so in one line; never report it as fine."
+  fi
+fi
+
 # Only run inside a git repo
 if ! git rev-parse --git-dir &>/dev/null 2>&1; then
   exit 0
