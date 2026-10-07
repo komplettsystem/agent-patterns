@@ -65,6 +65,25 @@ class SyncAgentBase(unittest.TestCase):
         self.assertIn("A local note only this repo has.", out.stdout)
         self.assertEqual(self.read(path), local + PROJECT)
 
+    def test_reworded_line_updates_when_copy_matches_a_committed_base(self):
+        # The base lives in a git repo; the copy equals an older committed version, so the
+        # changed line is the base's own old wording, not a local edit.
+        subprocess.run(["git", "init", "-q", self.root], check=True)
+        reworded = NEW_BASE.replace("Text one.", "Text one, reworded.")
+        with open(self.base, "w") as f:
+            f.write(NEW_BASE)
+        subprocess.run(["git", "-C", self.root, "add", "AGENT-BASE.md"], check=True)
+        subprocess.run(["git", "-C", self.root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"],
+                       check=True)
+        with open(self.base, "w") as f:
+            f.write(reworded)
+        path = self.repo("plain", NEW_BASE + PROJECT)
+        local = self.repo("custom", NEW_BASE + "\nA local note.\n" + PROJECT)
+        out = self.run_script("--apply")
+        self.assertIn("plain: updated", out.stdout)
+        self.assertEqual(self.read(path), reworded.rstrip("\n") + "\n" + PROJECT)
+        self.assertIn("custom: skipped, local edits would be lost", out.stdout)
+
     def test_missing_project_section_is_skipped(self):
         path = self.repo("odd", "# Just a file\n")
         out = self.run_script("--apply")

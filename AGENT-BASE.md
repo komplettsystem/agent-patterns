@@ -110,8 +110,9 @@ again, as if for the first time, not against your memory of having checked it be
 
 ## 10. Self-edit for AI writing tics
 
-Before presenting a substantial written deliverable (docs, reports, README-style writing —
-not quick replies), check for these seven patterns. A human reader who works with LLM
+Before presenting a substantial written deliverable (docs, reports, README-style writing), or
+any text drafted for someone else to send, however short (a two-line reply to a recruiter
+counts), check for these seven patterns. Conversational replies to the human are exempt. A human reader who works with LLM
 output daily catches these on sight; catch them first.
 
 1. **Abstraction that hides the mechanism instead of stating it.** Bad: "the gap is

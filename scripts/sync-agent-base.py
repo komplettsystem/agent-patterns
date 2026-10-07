@@ -6,8 +6,10 @@ as AGENT-BASE.md changes. This script updates them. The base section is everythi
 the "---" line that opens "## Project-Specific Guidelines"; the project section is never
 touched.
 
-A repo whose base section has lines the new base doesn't contain (local edits, as in
-AI-first-PM-workflow) is skipped and those lines are printed: syncing would delete them.
+A repo whose base section matches any committed version of the base file is updated, even
+when a line was reworded. A repo whose base section matches no committed version and has
+lines the new base doesn't contain (local edits, as in AI-first-PM-workflow) is skipped and
+those lines are printed: syncing would delete them.
 Dry run by default; --apply writes. Never commits.
 
 Usage:  python3 scripts/sync-agent-base.py [--apply] [--root DIR] [--base FILE]
@@ -16,6 +18,7 @@ Usage:  python3 scripts/sync-agent-base.py [--apply] [--root DIR] [--base FILE]
 import argparse
 import difflib
 import os
+import subprocess
 import sys
 
 MARKER = "\n---\n\n## Project-Specific"
@@ -37,7 +40,19 @@ def find_agents_files(root):
         yield name, path
 
 
-def plan(text, base):
+def committed_bases(base_path):
+    """Every committed version of the base file, normalised; empty if it isn't in git."""
+    d, name = os.path.split(os.path.abspath(base_path))
+    try:
+        revs = subprocess.run(["git", "-C", d, "log", "--format=%H", "--", name],
+                              capture_output=True, text=True, check=True).stdout.split()
+        return {subprocess.run(["git", "-C", d, "show", f"{r}:./{name}"], capture_output=True, text=True,
+                               check=True).stdout.rstrip("\n") for r in revs}
+    except (subprocess.CalledProcessError, OSError):
+        return set()
+
+
+def plan(text, base, known=frozenset()):
     """Return (status, new_text, added, removed) for one AGENTS.md."""
     i = text.find(MARKER)
     if i < 0:
@@ -49,7 +64,7 @@ def plan(text, base):
     diff = [d for d in difflib.ndiff(old_lines, new_lines) if d[:2] in ("+ ", "- ")]
     added = [d[2:] for d in diff if d.startswith("+ ")]
     removed = [d[2:] for d in diff if d.startswith("- ")]
-    if removed:
+    if removed and text[:i].rstrip("\n") not in known:
         return "local-edits", text, added, removed
     return "update", base.rstrip("\n") + "\n" + text[i:], added, removed
 
@@ -64,11 +79,12 @@ def main():
     with open(args.base) as f:
         base = f.read()
 
+    known = committed_bases(args.base)
     changed = []
     for name, path in find_agents_files(args.root):
         with open(path) as f:
             text = f.read()
-        status, new_text, added, removed = plan(text, base)
+        status, new_text, added, removed = plan(text, base, known)
         if status == "current":
             print(f"{name}: up to date")
         elif status == "no-marker":
