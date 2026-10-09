@@ -106,5 +106,50 @@ class TokenLedger(unittest.TestCase):
         self.assertIn("claude-opus-5-5", out)
 
 
+    def test_outcomes_join_handed_deliverables_on_date_and_project(self):
+        self.write(os.path.join(self.proj, "s1.jsonl"),
+                   [assistant("m1", "claude-opus-5-5", 300, cache_read=900)])
+        self.write(os.path.join(self.proj, "s2.jsonl"),
+                   [assistant("m2", "claude-opus-5-5", 100, session="s2",
+                              ts="2026-10-09T09:00:00Z")])
+        judgment = os.path.join(self.tmp.name, "JUDGMENT.md")
+        with open(judgment, "w") as f:
+            f.write("# J\n\n## Handed for review\n\ntext\n\n"
+                    "| Date | Project | Deliverable | Outcome |\n|---|---|---|---|\n"
+                    "| 2026-10-08 | tech-radar | Entry A | accepted |\n"
+                    "| 2026-10-08 | tech-radar | Entry B | corrected (1) |\n"
+                    "| 2026-10-08 | other | Draft C | open |\n"
+                    "\n## Retired\n\n| 2026-10-08 | tech-radar | not a row | accepted |\n")
+        out = self.run_script("--since", "2026-10-01", "--outcomes", judgment)
+        line = next(l for l in out.splitlines()
+                    if l.startswith("2026-10-08") and "tech-radar" in l)
+        cols = line.split()
+        # date project handed accepted corrected open output all_input out_per_handed
+        self.assertEqual(cols[2:6], ["2", "1", "1", "0"])
+        self.assertEqual(cols[6], "300")
+        self.assertEqual(cols[8], "150")
+        other = next(l for l in out.splitlines() if l.startswith("2026-10-08") and "other" in l)
+        self.assertEqual(other.split()[6], "0")  # no tokens recorded for that project
+        self.assertFalse(any(l.startswith("2026-10-09") for l in out.splitlines()),
+                         "days with no handed deliverable are not listed")
+
+    def test_outcomes_join_exactly_on_session_when_given(self):
+        # session s2 started in tech-radar, but the deliverable belongs to another project
+        self.write(os.path.join(self.proj, "s2.jsonl"),
+                   [assistant("m2", "claude-opus-5-5", 100, session="s2-abcdef",
+                              ts="2026-10-08T09:00:00Z"),
+                    assistant("m3", "claude-opus-5-5", 40, session="s2-abcdef",
+                              ts="2026-10-09T09:00:00Z")])
+        judgment = os.path.join(self.tmp.name, "JUDGMENT.md")
+        with open(judgment, "w") as f:
+            f.write("## Handed for review\n\n"
+                    "| Date | Project | Deliverable | Outcome | Session |\n|---|---|---|---|---|\n"
+                    "| 2026-10-09 | elsewhere | Options | accepted | s2-abc |\n")
+        out = self.run_script("--since", "2026-10-01", "--outcomes", judgment)
+        cols = next(l for l in out.splitlines() if l.startswith("session s2-abc")).split()
+        self.assertEqual(cols[2:6], ["1", "1", "0", "0"])
+        self.assertEqual(cols[6], "140")
+
+
 if __name__ == "__main__":
     unittest.main()
