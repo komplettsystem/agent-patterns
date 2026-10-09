@@ -83,6 +83,7 @@ The experiment loop requires a measurable quality signal. Examples:
 | Knowledge base article | Evidence strength: Supported → Anecdotal → Unverified |
 | Code | Test pass rate + coverage |
 | PRD | Review agent scores across cross-functional dimensions |
+| Any output a panel can judge | Adversarial panel verdict: separate agents, each in its own context and independent of the agent that produced the output, review it against a rubric, and a second pass verifies their findings. Use it when no single automated metric captures correctness. Examples in Claude Code: a Workflow `pipeline(review → verify)`, or `/code-review` |
 
 If you can't define a quality signal, use the research loop instead.
 
