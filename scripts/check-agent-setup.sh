@@ -122,6 +122,20 @@ if [[ -n "${AUDIT_DAYS:-}" ]]; then
   fi
 fi
 
+# --- Token ledger ---
+# Transcripts are deleted after about 30 days; scripts/token-ledger.py copies their token
+# totals per session, model and agent kind into a ledger that stays. Once a day, silent
+# unless it fails (under a second).
+ledger_marker="${XDG_CACHE_HOME:-$HOME/.cache}/agent-patterns/token-ledger-$(date +%F).done"
+if [[ ! -e "$ledger_marker" ]]; then
+  mkdir -p "$(dirname "$ledger_marker")"
+  if python3 "$STANDARDS_DIR/scripts/token-ledger.py" > /dev/null 2>&1; then
+    touch "$ledger_marker"
+  else
+    echo "[tokens] The token ledger failed to update. Say so in one line."
+  fi
+fi
+
 # --- Judgment drift and memory consistency ---
 # Corrections kept as durable examples go stale and can contradict each other, and the
 # same memory can drift apart between projects. scripts/check-judgment-drift.py says
